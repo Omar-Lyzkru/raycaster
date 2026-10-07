@@ -1,23 +1,21 @@
 # C++ Console Raycaster
 
-An early C++ project that turns a small 2D map into a first-person, 3D-style view inside the Windows console.
+An early C++ project that turns a 2D grid map into a first-person, 3D-style view in the Windows console.
 
-The renderer casts rays toward walls and draws vertical columns of text characters based on their distance from the player. Everything is rendered through the Windows console API; no SFML or other graphics library is used.
+The renderer casts rays toward walls and draws vertical columns of text characters based on their distance from the player. It uses the Win32 console API, with no external graphics library.
 
 ## Features
 
-The more complete version, [confpsbutbetter.cpp](1st%20project/confpsbutbetter.cpp), includes:
-
-- A 120-column × 40-row text display.
-- A hardcoded 16 × 16 map with walls and open spaces.
-- Forward and backward movement, plus left and right rotation.
-- Movement scaled by elapsed frame time.
-- Wall collision checks that reverse movement when a wall is hit.
-- Distance-based wall shading using Unicode block characters.
-- Floor shading using `#`, `x`, `.`, and `-`.
-- Wall tile boundary outlines.
-- A map overlay with a `P` player marker.
-- Player position, viewing angle, and FPS displayed above the map.
+- A 120 × 40 character display and a hardcoded 16 × 16 world.
+- Forward/backward movement and left/right rotation.
+- Frame-time-based movement with wall collision checks.
+- Safe map boundaries and small movement steps to prevent passing through walls.
+- Distance-based Unicode wall shading, floor shading, and wall tile outlines.
+- Fish-eye correction using perpendicular wall distance.
+- A map overlay with a player marker, position, viewing angle, and FPS.
+- A target of 60 frames per second to avoid an unrestricted rendering loop.
+- Escape to quit and restore the previous console screen buffer.
+- Error messages for console setup or rendering failures.
 
 ## Controls
 
@@ -27,72 +25,88 @@ The more complete version, [confpsbutbetter.cpp](1st%20project/confpsbutbetter.c
 | S | Move backward |
 | A | Rotate left |
 | D | Rotate right |
+| Escape | Quit |
 
-There is no built-in exit key. Close the console window to stop the program.
+The program polls Windows key states, so these keys can also affect it while another window has focus.
 
 ## How it works
 
-1. Read keyboard input and update the player's position and angle.
-2. Cast one ray for each screen column across a 45° field of view.
-3. Advance each ray in 0.1-unit steps until it reaches a wall, leaves the map, or reaches the 16-unit rendering limit.
-4. Use the distance to calculate the height of the wall column: nearby walls appear taller.
-5. Choose wall characters based on distance and leave thin gaps near detected tile corners.
-6. Fill the ceiling and floor, add the statistics and map, and write the frame to a Windows console screen buffer.
+Each frame, the program reads input and updates the player. It casts one ray per screen column across a 45° field of view, advancing in 0.1-unit steps until reaching a wall, a map boundary, or the 16-unit rendering limit.
 
-The world is a 2D grid. The apparent depth comes from projecting wall distances into the console display.
+Wall distance determines the height and shade of each column. Perpendicular distance is used for projection so straight walls do not curve across the view. The renderer adds the ceiling, floor, statistics, and map before writing the frame to a Windows console screen buffer.
 
-## Repository contents
+Map coordinates consistently use X for columns and Y for rows. Out-of-bounds cells are treated as walls, including the open edges in the original map. Movement is checked in small steps and separately along each axis, allowing the player to slide along walls.
 
-| File | Purpose |
-| --- | --- |
-| `1st project/confpsbutbetter.cpp` | More complete interactive raycaster with shading, collision checks, statistics, and map overlay. |
-| `1st project/confps.cpp` | Earlier fixed-view prototype that draws walls with `#` characters; contains source errors. |
-| `1st project/idk.cpp` | Small console test that prints `Omar`. |
-| `1st project/*.exe` | Committed Windows executables; their correspondence to the current source has not been verified. |
-| `.vscode/` | Windows editor and build settings, including a machine-specific MSYS2 compiler path. |
+## Build and run
 
-## Building on Windows
+### Requirements
 
-Requirements:
-
-- Windows, because the source uses `Windows.h` and Win32 console functions.
-- A C++ compiler with Windows headers and C++11 support or newer.
-- A console configured for at least 120 columns and 40 rows, with a font that displays Unicode block characters.
+- Windows for the interactive raycaster.
+- A C++17 compiler, such as MSYS2 MinGW-w64 GCC or Visual Studio's C++ tools.
+- A console font that displays Unicode block characters. The window must fit 120 columns and 40 rows; use a smaller font if console sizing fails.
+- CMake 3.16 or newer if using the CMake build.
 
 Clone the repository:
 
-```sh
+~~~sh
 git clone https://github.com/Omar-Lyzkru/raycaster.git
 cd raycaster
-```
+~~~
 
-With a Windows MinGW-w64 compiler available as `g++`, the intended build command for the more complete version is:
+### Direct build with MinGW-w64
 
-```sh
-g++ -std=c++11 "1st project/confpsbutbetter.cpp" -o "1st project/confpsbutbetter.exe"
-```
+From the repository root, with Windows MinGW-w64 `g++` on your PATH:
 
-Run it from PowerShell:
+~~~sh
+g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic "1st project/confpsbutbetter.cpp" -o raycaster.exe -static -luser32
+~~~
 
-```powershell
-& ".\1st project\confpsbutbetter.exe"
-```
+Run from PowerShell:
 
-The repository's VS Code build task expects `C:/msys64/ucrt64/bin/g++.exe`. Adjust that path for your installation.
+~~~powershell
+.\raycaster.exe
+~~~
 
-**Build status:** These instructions are based on source inspection. Compilation and interactive execution have not been verified, and the current source may need the compatibility fixes below.
+The static build bundles the GCC runtime libraries into the executable.
 
-## Current limitations
+### Build with CMake
 
-This is an early learning project with a few rough edges:
+~~~sh
+cmake -S . -B build
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+~~~
 
-- The older `confps.cpp` uses `nMapwidth` instead of `nMapWidth` and does not explicitly include `<cmath>`.
-- The more complete version defines `NOMINMAXd` instead of `NOMINMAX`. Its `std::sinf` and `std::cosf` declarations may also need adjustment for the chosen compiler.
-- Movement checks walls without checking map bounds first. Some map edges are open, so leaving the map can cause an invalid memory access.
-- Rays use their raw distance for projection, without fish-eye correction.
-- There is no frame limit, exit handling, or console buffer cleanup.
-- There are no textures, enemies, shooting mechanics, or external map files.
+With a Visual Studio generator, run `.\build\Release\raycaster.exe`. With a single-configuration generator such as MinGW Makefiles or Ninja, run `.\build\raycaster.exe`.
 
-## Learning focus
+## Tests
 
-This project explores raycasting, trigonometry, grid maps, frame timing, keyboard input, collision checks, and console rendering in C++.
+The movement and ray-calculation tests run on Windows, Linux, and macOS. The interactive application remains Windows-only; on other platforms CMake builds just the tests.
+
+~~~sh
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+~~~
+
+The tests cover row/column indexing, map boundaries, wall collisions, large movement steps, wall sliding, ray distances, rendering limits, and fish-eye correction.
+
+**Verification:** The application has been cross-compiled for 64-bit Windows with MinGW-w64 GCC 13. All five calculation test groups passed on Linux, including a run with address and undefined-behavior sanitizers. Interactive Windows console behavior still needs a live check.
+
+## Repository layout
+
+| File | Purpose |
+| --- | --- |
+| `1st project/confpsbutbetter.cpp` | Windows console setup, input, frame timing, and rendering. |
+| `1st project/raycaster_core.h` | Map lookup, movement, ray casting, and projection calculations. |
+| `tests/raycaster_tests.cpp` | Calculation regression tests. |
+| `CMakeLists.txt` | Builds the Windows application and portable tests. |
+| `.gitignore` | Keeps generated binaries, build output, and personal editor settings out of Git. |
+
+The older prototype, unrelated console test, committed executables, and personal editor settings were removed. Their originals remain available in Git history.
+
+## Current scope
+
+This is a learning project using a grid map and text rendering. It has no textures, enemies, shooting mechanics, or external map files. Collision treats the player as a point, and rays use fixed-size steps rather than a grid traversal algorithm. The console is restored when exiting with Escape or when a handled error occurs; forcibly terminating the process does not run that cleanup.
+
+The project explores raycasting, trigonometry, frame timing, keyboard input, collision handling, and console rendering in C++.
