@@ -88,10 +88,36 @@ public:
     ConsoleBuffer& operator=(const ConsoleBuffer&) = delete;
 
     void display(const std::vector<wchar_t>& frame) const {
-        DWORD written = 0;
-        requireConsole(WriteConsoleOutputCharacterW(buffer_, frame.data(),
-            static_cast<DWORD>(frame.size()), {0, 0}, &written), "Writing the frame");
-        if (written != frame.size()) throw std::runtime_error("Incomplete console frame write");
+        for (SHORT row = 0; row < screenHeight; ++row) {
+            DWORD written = 0;
+
+            COORD position{
+                0,
+                row
+            };
+
+            requireConsole(
+                WriteConsoleOutputCharacterW(
+                    buffer_,
+                    frame.data() + row * screenWidth,
+                    screenWidth,
+                    position,
+                    &written
+                ),
+                "Writing console row"
+            );
+
+            if (written != screenWidth) {
+                throw std::runtime_error(
+                    "Incomplete console row write: row " +
+                    std::to_string(row) +
+                    " wrote " +
+                    std::to_string(written) +
+                    " of " +
+                    std::to_string(screenWidth)
+                );
+            }
+        }
     }
 
 private:
