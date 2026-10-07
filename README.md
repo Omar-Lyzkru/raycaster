@@ -1,6 +1,6 @@
 # C++ Console Raycaster
 
-An early C++ project that turns a 2D grid map into a first-person, 3D-style view in the Windows console.
+A tutorial-based C++ learning project that turns a 2D grid map into a first-person, 3D-style view in the Windows console.
 
 The renderer casts rays toward walls and draws vertical columns of text characters based on their distance from the player. It uses the Win32 console API, with no external graphics library.
 
@@ -33,7 +33,7 @@ The program polls Windows key states, so these keys can also affect it while ano
 
 Each frame, the program reads input and updates the player. It casts one ray per screen column across a 45° field of view, advancing in 0.1-unit steps until reaching a wall, a map boundary, or the 16-unit rendering limit.
 
-Wall distance determines the height and shade of each column. Perpendicular distance is used for projection so straight walls do not curve across the view. The renderer adds the ceiling, floor, statistics, and map before writing the frame to a Windows console screen buffer.
+Wall distance determines the height and shade of each column. Perpendicular distance is used for projection so straight walls do not curve across the view. The renderer adds the ceiling, floor, statistics, and map before writing the frame to a Windows console screen buffer, one 120-character row at a time. Each write checks both the API result and the number of characters written.
 
 Map coordinates consistently use X for columns and Y for rows. Out-of-bounds cells are treated as walls, including the open edges in the original map. Movement is checked in small steps and separately along each axis, allowing the player to slide along walls.
 
@@ -61,11 +61,15 @@ From the repository root, with Windows MinGW-w64 `g++` on your PATH:
 g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic "1st project/confpsbutbetter.cpp" -o raycaster.exe -static -luser32
 ~~~
 
-Run from PowerShell:
+Run in a **standalone Command Prompt** from the repository root:
 
-~~~powershell
-.\raycaster.exe
+~~~bat
+raycaster.exe
 ~~~
+
+The intended display remains **120 × 40**. Row-by-row output has been tested successfully on the author's Windows PC in standalone Command Prompt. The VS Code integrated terminal can produce partial-write errors with this legacy Windows Console API renderer, so use standalone Command Prompt for interactive testing.
+
+If a row is incomplete, the error reports its row number and the actual character count, for example: `Incomplete console row write: row 9 wrote 99 of 120`.
 
 The static build bundles the GCC runtime libraries into the executable.
 
@@ -91,7 +95,7 @@ ctest --test-dir build --output-on-failure
 
 The tests cover row/column indexing, map boundaries, wall collisions, large movement steps, wall sliding, ray distances, rendering limits, and fish-eye correction.
 
-**Verification:** The application has been cross-compiled for 64-bit Windows with MinGW-w64 GCC 13. All five calculation test groups passed on Linux, including a run with address and undefined-behavior sanitizers. Interactive Windows console behavior still needs a live check.
+**Verification:** Before the row-by-row output change, the application was cross-compiled for 64-bit Windows with MinGW-w64 GCC 13. All five calculation test groups passed on Linux, including a run with address and undefined-behavior sanitizers. The author has also confirmed that the row-by-row renderer runs in standalone Command Prompt on Windows with the MSYS2 UCRT64 compiler (`C:\msys64\ucrt64\bin\g++.exe`), including movement, rotation, the minimap, player marker, FPS, and wall/floor shading. The VS Code integrated terminal is not an interactive test target.
 
 ## Repository layout
 
